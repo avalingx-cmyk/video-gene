@@ -1,46 +1,70 @@
-# Questions for Video Creator Project
+# Questions & Answers for Video Creator Project
 
-## Technical Questions
-1. What is the expected video length for typical use cases? video lenght should me 30 second or more than 5 minutes more my more
-2. What resolution and frame rate should be targeted? for now focus on mobile 1080x1920
-3. Should the system support audio generation alongside video? yes
-4. Are there any specific styles or domains the video should specialize in (e.g., educational, marketing, entertainment)? educational , marketing and technology video for youtube video
-5. What level of prompt complexity should be supported (simple objects vs complex scenes with multiple actions)? both
+## Technical Specifications
+1. **Video length**: 30 seconds minimum, up to 5+ minutes
+2. **Resolution**: 1080x1920 (portrait/mobile)
+3. **Audio support**: Yes — background music and voiceover
+4. **Content styles**: Educational, marketing, and technology videos for YouTube
+5. **Prompt complexity**: Both simple and complex scenes supported
 
-## User Experience Questions
-1. Who is the target audience for this tool? this targeting for kids parents and social media user also for marketing focus on the product us4r for youtube tech user problem solver knowloege 
-2. How technical are the expected users? need to leran the new tech or solveing issue or builidng
-3. Should there be advanced controls for experienced users or a simple interface for beginners? for  now focus on the simple interface
-4. What output formats are required (MP4, GIF, WebM)? mp4
-5. Should the system allow video editing after generation (trimming, concatenation)?yes
+## Input Formats
+6. **Text prompts**: Yes (primary)
+7. **File uploads**: .md and .pdf files supported
+8. **Image references**: Yes — users can attach images to prompts for image-to-video
+9. **Video-to-video**: No (text-to-video only for now)
 
-## Deployment Questions
-1. Where will this be deployed (web app, desktop app, API service)?web app
-2. What are the expected usage patterns (occasional vs heavy usage)? both may user use automation alsso use nsing n8n
-3. Are there latency requirements for video generation? maybe
-4. What is the budget for computational resources (GPU hours)? 0 no resouce total clouad using 3rd pary resources
-5. Should the system work offline or require internet connection? online
+## Output & Editing
+10. **Output format**: MP4 only
+11. **Post-generation editing**: Yes — trimming and concatenation
+12. **Watermark**: No
 
-## Integration Questions
-1. Should this integrate with existing content creation tools? no
-2. Are there any specific platforms where videos need to be published directly (YouTube, social media)? yes with shedule time
-3. Should there be API access for developers to integrate video generation into their applications? yes ( for now planing for m8n) also other as well
-4. What file formats should be supported for input (besides text prompt)? text prompw also user can upload .md or pdf filw
-5. Should the system support video-to-video or image-to-video transformation? for now onlay text to video but also need to get the infor for image ( user ablue add the image in the prompt)
+## User Experience
+13. **Target audience**: Parents, kids, social media users, YouTube creators (tech/marketing focus)
+14. **User technical level**: Mixed — users learning new tech or solving problems
+15. **Interface**: Simple mode for now (no advanced controls)
 
-## Safety and Ethical Questions
-1. What content filters should be implemented to prevent harmful generations? no 18+ ,no harmful content  
-2. How should copyright concerns be addressed regarding training data and generated content?need ato reasearch
-3. Should AI-generated videos be watermarked? no for now
-4. What data privacy measures are needed for user prompts?it's only for user acces no expose
-5. How should misuse of the system be prevented? need to  research
+## Deployment & Infrastructure
+16. **Platform**: Web app
+17. **Usage pattern**: Both occasional and heavy usage; n8n automation support needed
+18. **Latency requirements**: Flexible
+19. **Budget**: $0 — fully cloud-based using third-party APIs (no self-hosted GPU)
+20. **Connectivity**: Online only
 
-## Additional Clarification Questions (Added 2026-04-30)
-1. What is the acceptable latency/generation time for a video? The answer was "maybe" — are you okay with 2-10 minute generation times via cloud APIs, or do you need faster?
-2. For image-in-prompt support: should users be able to upload multiple images, or just one image per prompt?
-3. What is the expected maximum concurrent users? This affects API rate limit planning and cost estimation.
-4. For n8n integration: should the API support synchronous (wait for result) calls, asynchronous (job ID + webhook), or both?
-5. For social media publishing: which specific platforms besides YouTube are priority? (e.g., TikTok, Instagram Reels, Twitter/X, Facebook)
-6. Should users have accounts/authentication, or is this a guest-access tool?
-7. What is the per-video budget ceiling for cloud API calls? (e.g., $0.10/video, $1.00/video) This determines which APIs are viable.
+## Integrations
+21. **Content creation tools**: No direct integration
+22. **Publishing**: Yes — YouTube with scheduled publishing
+23. **Developer API**: Yes — planning for n8n first, then others
+24. **Other automation**: Open to additional integrations
 
+## Safety & Ethics
+25. **Content filters**: No 18+ content, no harmful content
+26. **Copyright**: Needs research
+27. **Misuse prevention**: Needs research
+28. **Data privacy**: User-only access, no external exposure
+
+## Operations & Reliability
+29. **Job queuing**: Yes — video generation APIs are async with long wait times; need job queue with status polling and webhook callbacks
+30. **Retry strategy**: Automatic retry on API failure with exponential backoff, then fallback to next provider in router chain
+31. **Error notifications**: In-app status updates; email notification on completion or failure for long jobs
+32. **Rate limiting**: Per-user rate limits to stay within free-tier API quotas; queue excess requests
+
+## User Management
+33. **Authentication**: Simple email/password or OAuth (Google) — lightweight for now
+34. **Multi-user**: Yes — each user has their own video library, prompts, and scheduled publishes
+35. **User roles**: Single role for now (no admin/creator distinction yet)
+
+## Audio Details
+36. **Voiceover languages**: English only for now
+37. **Voice style**: Natural/conversational for educational; professional for marketing/tech
+38. **Background music style**: Matches video content type — user does not select manually (auto-determined by prompt enhancer)
+39. **User audio upload**: No — audio is generated only, no custom audio uploads for now
+
+## n8n Integration Details
+40. **Trigger direction**: Both — n8n can trigger video generation via webhook, and completed videos can trigger n8n workflows
+41. **Payload format**: JSON with prompt, settings, and callback URL for async completion
+42. **Authentication for API**: API key per user for developer/n8n access
+
+## Open Research Items
+43. **Copyright**: Do generated videos from AI models have clear usage rights? Do any APIs claim ownership?
+44. **Misuse prevention**: What detection methods work for deepfake-style content generation?
+45. **API portrait support**: Which video generation APIs actually support 1080x1920 output natively vs. requiring post-crop?

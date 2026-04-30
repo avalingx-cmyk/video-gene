@@ -140,41 +140,79 @@ Cloud-based video generation platform that creates videos from text prompts, mar
   - Image references
 - PostgreSQL for metadata (prompts, video records, user preferences)
 
+### 9. Job Queue & Async Processing
+- Video generation APIs are async with 30s–5min+ wait times
+- Use Redis-based job queue (Celery or RQ) for:
+  - Submitting generation jobs to external APIs
+  - Polling API status / handling webhook callbacks
+  - Retry with exponential backoff on transient failures
+  - Fallback chain: if primary API fails/quota exhausted, queue to next provider
+- User-facing status polling endpoint and in-app progress indicator
+- Email notification on job completion or failure
+
+### 10. Authentication & User Management
+- Simple email/password + OAuth (Google) authentication
+- Per-user isolation: each user has own video library, prompts, scheduled publishes
+- API key generation per user for n8n/developer access
+- Single user role for now (no admin distinction)
+- Session management via JWT tokens
+
+### 11. Rate Limiting & Quota Management
+- Per-user rate limits to stay within free-tier API quotas
+- Queue excess requests when limits hit
+- Track API usage per provider to optimize cost routing
+
+### 12. n8n Integration API
+- Webhook endpoints:
+  - POST /api/v1/generate — trigger video generation (JSON payload with prompt, settings, callback URL)
+  - POST /api/v1/webhook/complete — callback URL target for n8n to receive completed video URL
+- JSON payload format: `{ prompt, style, length, audio, callback_url, api_key }`
+- API key authentication for all developer endpoints
+
 ## Implementation Steps
 
 ### Phase 1: Foundation (Week 1-2)
-1. Set up FastAPI backend project structure
-2. Implement input parser (text, .md, .pdf extraction)
-3. Build content filter module
-4. Implement prompt enhancer for educational/marketing/tech styles
-5. Integrate ONE video generation API (start with Replicate for flexibility)
-6. Basic web UI — simple prompt input, file upload, video display
-7. FFmpeg integration for MP4 output at 1080x1920
+- [x] 1. Set up FastAPI backend project structure
+- [x] 2. Set up Redis job queue (Celery/RQ) for async processing
+- [ ] 3. Implement authentication (email/password + Google OAuth) — stubs created, need OAuth integration
+- [x] 4. Implement input parser (text, .md, .pdf extraction) — schema and endpoint scaffolded
+- [x] 5. Build content filter module — keyword-based filter implemented
+- [x] 6. Implement prompt enhancer for educational/marketing/tech styles
+- [ ] 7. Integrate ONE video generation API (start with Replicate for flexibility) — router scaffolded, provider calls TODO
+- [ ] 8. Basic web UI — simple prompt input, file upload, video display
+- [ ] 9. FFmpeg integration for MP4 output at 1080x1920
+- [x] 10. Job status polling endpoint and in-app progress indicator — endpoint scaffolded
 
 ### Phase 2: Audio & Post-Processing (Week 3)
 1. Integrate text-to-speech API for voiceover
 2. Add background music generation/selection
 3. Implement video trimming and concatenation
 4. Audio-video mixing pipeline
+5. Implement retry logic with exponential backoff and provider fallback chain
 
 ### Phase 3: Integrations (Week 4)
 1. YouTube API integration with scheduling
-2. n8n webhook endpoints for automation
-3. Additional video API integrations (Runway, Pika, Luma)
-4. API router with fallback chain
+2. n8n webhook endpoints (POST /api/v1/generate, POST /api/v1/webhook/complete)
+3. API key generation and authentication for developer endpoints
+4. Additional video API integrations (Runway, Pika, Luma)
+5. API router with fallback chain and rate limiting
+6. Email notifications for job completion/failure
 
 ### Phase 4: Polish & Launch (Week 5)
 1. Cloud storage setup (S3/R2)
-2. PostgreSQL metadata storage
-3. Simple web interface refinement
-4. Testing with real prompts across content types
-5. API documentation for n8n and developer access
+2. PostgreSQL metadata storage with per-user isolation
+3. User video library and prompt history UI
+4. Rate limiting and quota management dashboard
+5. Testing with real prompts across content types
+6. API documentation for n8n and developer access
+7. Resolve open research items (copyright, misuse prevention, API portrait support)
 
 ## Technology Stack
 
 | Layer | Technology |
 |---|---|
 | Backend | Python 3.11+, FastAPI |
+| Job Queue | Redis + Celery (async task processing, retries) |
 | Frontend | Svelte (simple, lightweight) or Next.js |
 | Video APIs | Replicate, Runway ML, Pika, Luma (3rd party) |
 | Audio APIs | ElevenLabs (TTS), royalty-free music library |
@@ -183,8 +221,10 @@ Cloud-based video generation platform that creates videos from text prompts, mar
 | Storage | S3 or Cloudflare R2 |
 | PDF Parsing | PyPDF2 or pdfplumber |
 | MD Parsing | markdown library |
+| Auth | Email/password + Google OAuth, JWT sessions |
 | Deployment | Railway / Render / Fly.io (free tier) |
 | Automation | n8n webhook endpoints |
+| Notifications | Email (Resend/SendGrid free tier) |
 
 ## Cost Strategy (Zero Budget)
 
@@ -202,3 +242,18 @@ Cloud-based video generation platform that creates videos from text prompts, mar
 - Input content filtered before sending to third-party APIs
 - Generated videos accessible only to the creating user
 - No watermarking (per requirement)
+- Per-user API key authentication for developer/n8n endpoints
+- JWT token-based session management
+
+## Video-to-Video
+
+Explicitly excluded from scope (text-to-video only). The system does not accept input videos for transformation. This decision is based on budget constraints and complexity. May be reconsidered in a future phase.
+
+## Open Research Items
+
+| Item | Status | Notes |
+|---|---|---|
+| Copyright on AI-generated video | Unresolved | Need to verify ToS of each video API — do they claim ownership? Can generated content be used commercially? |
+| Misuse prevention | Unresolved | Need to evaluate watermarking options, content provenance standards (C2PA), and detection methods |
+| API portrait mode support | Unresolved | Verify which APIs natively support 1080x1920 vs. requiring post-crop (adds compute cost) |
+| Free tier limits | Unresolved | Document exact free-tier quotas per API to plan rate limiting accurately |

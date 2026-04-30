@@ -66,6 +66,9 @@ Cloud-based video generation platform that creates videos from text prompts, mar
 | Video length | 30 seconds to 5+ minutes |
 | Resolution | 1080x1920 (portrait/mobile) |
 | Audio | Yes — background music + voiceover |
+| Voiceover languages | English only for now |
+| Voice style | Natural/conversational for educational; professional for marketing/tech |
+| Background music style | Auto-selected by prompt enhancer based on video content type |
 | Content types | Educational, marketing, technology (YouTube) |
 | Prompt complexity | Both simple and complex |
 | Target audience | Parents, kids, social media users, YouTube creators |
@@ -74,7 +77,8 @@ Cloud-based video generation platform that creates videos from text prompts, mar
 | Post-generation editing | Trimming, concatenation |
 | Deployment | Web app |
 | Budget | $0 — cloud only, third-party APIs |
-| Automation | n8n integration |
+| Automation | n8n bidirectional integration (trigger + callback) |
+| n8n trigger direction | Both — n8n triggers generation via webhook; completed videos trigger n8n workflows |
 | Input formats | Text prompt, .md file, .pdf file, image references |
 | Image-to-video | Yes — user can attach images to prompt |
 | Content filter | No 18+, no harmful content |
@@ -116,7 +120,10 @@ Cloud-based video generation platform that creates videos from text prompts, mar
 
 ### 5. Audio Synthesis
 - Voiceover: ElevenLabs API or similar text-to-speech
+  - **Languages**: English only for now
+  - **Voice style**: Natural/conversational for educational content; professional for marketing/technology content
 - Background music: Suno / MusicGen API or royalty-free library
+  - **Style selection**: Auto-determined by prompt enhancer based on video content type; user does not manually select
 - Audio-video sync and mixing via FFmpeg
 
 ### 6. Video Post-Processing
@@ -163,6 +170,9 @@ Cloud-based video generation platform that creates videos from text prompts, mar
 - Track API usage per provider to optimize cost routing
 
 ### 12. n8n Integration API
+- **Bidirectional triggers**: 
+  - n8n can trigger video generation via webhook (POST /api/v1/generate)
+  - Completed videos can trigger n8n workflows via callback URL
 - Webhook endpoints:
   - POST /api/v1/generate — trigger video generation (JSON payload with prompt, settings, callback URL)
   - POST /api/v1/webhook/complete — callback URL target for n8n to receive completed video URL

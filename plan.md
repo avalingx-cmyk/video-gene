@@ -34,7 +34,7 @@ Create a video from a user prompt (text input, with optional .md/.PDF file uploa
 - **Backend**: Node.js (Express/Fastify) or Python (FastAPI) for API orchestration and webhook handling.
 - **Frontend**: Simple web interface — React or vanilla JS with a clean, beginner-friendly UI.
 - **Video Processing**: FFmpeg (server-side) for trimming, concatenation, and format conversion.
-- **Database**: PostgreSQL or SQLite for storing prompts, videos, user preferences, and scheduled publish jobs.
+- **Database**: PostgreSQL for storing prompts, videos, user preferences, and scheduled publish jobs.
 - **Storage**: Cloud storage (S3, R2, or Cloudflare) for video assets.
 - **Deployment**: Cloud hosting (Vercel, Railway, Render, or similar) — zero local infrastructure.
 - **Automation**: n8n webhooks and API endpoints for workflow integration.
@@ -64,6 +64,33 @@ Create a video from a user prompt (text input, with optional .md/.PDF file uploa
 - Output format: MP4 only.
 - Post-generation editing: Trimming and concatenation within the app.
 - Input: Text prompt, .md file upload, .PDF file upload, optional image attachment in prompt.
+
+## Operations & Reliability
+- **Job queuing**: Video generation APIs are async with long wait times; use job queue with status polling and webhook callbacks.
+- **Retry strategy**: Automatic retry on API failure with exponential backoff; fallback to next provider in router chain.
+- **Error notifications**: In-app status updates; email notification on completion or failure for long jobs.
+- **Rate limiting**: Per-user rate limits to stay within free-tier API quotas; queue excess requests.
+
+## User Management
+- **Authentication**: Simple email/password or OAuth (Google); lightweight for now.
+- **Multi-user**: Each user has their own video library, prompts, and scheduled publishes.
+- **User roles**: Single role for now (no admin/creator distinction yet).
+
+## Audio Details
+- **Voiceover languages**: English only for now.
+- **Voice style**: Natural/conversational for educational; professional for marketing/tech.
+- **Background music style**: Matches video content type — auto-determined by prompt enhancer; user does not select manually.
+- **User audio upload**: Not supported — audio is generated only.
+
+## n8n Integration Details
+- **Trigger direction**: Bidirectional — n8n can trigger video generation via webhook, and completed videos can trigger n8n workflows.
+- **Payload format**: JSON with prompt, settings, and callback URL for async completion.
+- **Authentication for API**: API key per user for developer/n8n access.
+
+## API Research Items
+- **Copyright**: Do generated videos from AI models have clear usage rights? Do any APIs claim ownership?
+- **Misuse prevention**: What detection methods work for deepfake-style content generation?
+- **API portrait support**: Which video generation APIs actually support 1080x1920 output natively vs. requiring post-crop?
 
 ## Safety and Ethics
 - Content filtering: Block all 18+ and harmful content.

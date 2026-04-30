@@ -1,60 +1,73 @@
 # Project Plan: Video Creator
 
 ## Project Overview
-Create a video from a user prompt (text input). The system will generate a video based on the textual description provided by the user, with options for audio, style, and post-processing.
+Create a video from a user prompt (text input, with optional .md/.PDF file upload and image attachment). The system generates videos via third-party cloud APIs — no local GPU resources required.
 
 ## Goals
-- Accept a text prompt from the user.
-- Generate a video that matches the prompt (10-30 seconds, 1080p@30fps).
-- Support audio generation (background music, voiceover).
-- Provide options for video length, style, quality, and output format (MP4, GIF, WebM).
+- Accept text prompts, .md/.PDF file uploads, and optional image attachments from the user.
+- Generate videos ranging from 30 seconds to 5+ minutes in length.
+- Target mobile portrait resolution: 1080x1920.
+- Output format: MP4 only.
+- Support audio generation alongside video (background music, voiceover).
+- Specialize in educational, marketing, and technology videos for YouTube.
+- Support both simple prompts and complex multi-action scenes.
 - Allow basic video editing after generation (trimming, concatenation).
-- Enable direct publishing to platforms (YouTube, social media) and API access for developers.
-- Implement content filters (NSFW, violence) and privacy measures.
+- Enable direct publishing to YouTube and social media with scheduled posting.
+- Provide API access for developers (n8n automation and other integrations).
+- Implement content filters (no 18+, no harmful content) and privacy measures.
 
 ## Architecture
-1. **Input Module**: Receives user prompt and optional parameters (length, style, audio preferences).
-2. **Processing Module**: 
-   - Uses a text-to-video model (e.g., Stable Video Diffusion) or a pipeline of text-to-image (Stable Diffusion) and frame interpolation.
-   - Supports image-to-video and video-to-video transformations.
-   - Includes content filtering and watermarking options.
-   - May involve multiple steps: text embedding, frame generation, video encoding, audio synthesis.
-3. **Output Module**: Renders the video, provides download, and optionally publishes to connected platforms.
-4. **Integration Module**: Provides REST API and plugins for existing content creation tools.
-5. **Safety & Ethics Module**: Handles copyright concerns, data privacy, and misuse prevention.
+1. **Input Module**: Receives user input — text prompt, optional .md/.PDF file upload, and optional image attachment for image-in-prompt support.
+2. **Processing Module**:
+   - Parses and enhances prompts with style, lighting, and camera descriptors.
+   - Calls third-party cloud text-to-video APIs for video generation.
+   - Calls third-party cloud audio APIs for background music/voiceover.
+   - Includes content filtering before submission to generation APIs.
+3. **Output Module**: Receives generated video from cloud API, applies post-processing (trimming, concatenation via FFmpeg), and delivers MP4 output.
+4. **Publishing Module**: Direct upload to YouTube and social media platforms with scheduled posting support.
+5. **Integration Module**: REST API and webhooks for n8n automation and other developer integrations.
+6. **Safety & Ethics Module**: Content filtering (18+, harmful content), data privacy (user-only access), copyright research, and misuse prevention research.
 
 ## Technologies to Consider
-- Text-to-video models: Stable Video Diffusion, Modelscope, Pika Labs.
-- Text-to-image: Stable Diffusion XL for frame generation.
-- Audio: MusicLM, JAX, or similar for background music; Whisper for voiceover.
-- Backend: Python (FastAPI) for model handling and API.
-- Frontend: Web interface (Svelte for simplicity, React for advanced controls).
-- Video processing: FFmpeg for encoding, trimming, concatenation.
-- Database: PostgreSQL for storing prompts, videos, and user preferences (optional).
-- Deployment: Docker containers, scalable via Kubernetes or cloud serverless (AWS Lambda, Google Cloud Run).
-- Storage: Cloud storage (S3, R2) for video assets.
+- **Video Generation APIs**: Runway ML, Luma Dream Machine, Pika Labs, Kling AI, or similar cloud text-to-video services.
+- **Audio APIs**: ElevenLabs (voiceover), Suno/Udio (music), or similar cloud audio generation services.
+- **Backend**: Node.js (Express/Fastify) or Python (FastAPI) for API orchestration and webhook handling.
+- **Frontend**: Simple web interface — React or vanilla JS with a clean, beginner-friendly UI.
+- **Video Processing**: FFmpeg (server-side) for trimming, concatenation, and format conversion.
+- **Database**: PostgreSQL or SQLite for storing prompts, videos, user preferences, and scheduled publish jobs.
+- **Storage**: Cloud storage (S3, R2, or Cloudflare) for video assets.
+- **Deployment**: Cloud hosting (Vercel, Railway, Render, or similar) — zero local infrastructure.
+- **Automation**: n8n webhooks and API endpoints for workflow integration.
 
 ## Milestones
-1. Research and select appropriate models (text-to-video, audio, filtering).
-2. Set up development environment (Python, Node.js, Docker).
-3. Implement core generation pipeline (text-to-video, audio synthesis).
-4. Build user interface (web app with basic and advanced controls).
-5. Implement integration features (API, plugins, direct publishing).
-6. Add safety and ethics features (content filters, watermarking, privacy).
-7. Test and refine (quality, performance, safety).
-8. Deploy (web app, optional desktop/API service).
+1. Research and select appropriate third-party cloud APIs for text-to-video and audio generation.
+2. Set up development environment and cloud hosting.
+3. Implement core generation pipeline (prompt processing → cloud API calls → MP4 output).
+4. Build simple web interface for prompt input and video download.
+5. Implement video editing features (trimming, concatenation).
+6. Implement YouTube/social media publishing with scheduling.
+7. Implement n8n/webhook API integrations.
+8. Add content filtering and safety features.
+9. Test with various prompts and refine quality.
+10. Deploy and iterate.
 
 ## Deployment Considerations
-- Target deployment: Web app (primary), with optional desktop app via Electron and API service.
-- Usage patterns: Design for occasional to heavy usage with horizontal scaling.
-- Latency: Aim for under 2 minutes for a 10-second video (depending on model and hardware).
-- Budget: Use efficient models, consider spot instances/cloud credits for GPU hours.
-- Offline: Allow prompt submission and queuing; model requires internet for loading (or use cached models).
+- Target deployment: Web app only (no desktop or local deployment).
+- Usage patterns: Support both occasional users and heavy usage via n8n automation.
+- Latency: Cloud API dependent; implement job queuing and status polling for long generations.
+- Budget: $0 for compute — entirely third-party cloud APIs. Pay-per-use model for API calls.
+- Connectivity: Online only; no offline support.
 
 ## User Experience
-- Target audience: Content creators, marketers, educators, and hobbyists.
-- Technical level: Mixed; provide simple mode for beginners and advanced controls (seed, steps, guidance) for experts.
-- Output formats: MP4 (default), GIF and WebM for web use.
-- Post-generation editing: Basic trimming and concatenation within the app.
+- Target audience: Kids, parents, social media users, marketing professionals, YouTube creators, tech users, problem solvers, and knowledge sharers.
+- Technical level: Beginners learning new tech or solving issues — simple interface only, no advanced controls.
+- Output format: MP4 only.
+- Post-generation editing: Trimming and concatenation within the app.
+- Input: Text prompt, .md file upload, .PDF file upload, optional image attachment in prompt.
 
-
+## Safety and Ethics
+- Content filtering: Block all 18+ and harmful content.
+- Copyright: Research needed on training data and generated content rights.
+- Watermarking: Disabled for now.
+- Data privacy: User-only access; no exposure of prompts or generated content.
+- Misuse prevention: Research needed on prevention strategies.

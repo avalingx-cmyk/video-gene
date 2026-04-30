@@ -35,3 +35,12 @@
 4. What data privacy measures are needed for user prompts?it's only for user acces no expose
 5. How should misuse of the system be prevented? need to  research
 
+## Additional Clarification Questions (Added 2026-04-30)
+1. What is the acceptable latency/generation time for a video? The answer was "maybe" — are you okay with 2-10 minute generation times via cloud APIs, or do you need faster?
+2. For image-in-prompt support: should users be able to upload multiple images, or just one image per prompt?
+3. What is the expected maximum concurrent users? This affects API rate limit planning and cost estimation.
+4. For n8n integration: should the API support synchronous (wait for result) calls, asynchronous (job ID + webhook), or both?
+5. For social media publishing: which specific platforms besides YouTube are priority? (e.g., TikTok, Instagram Reels, Twitter/X, Facebook)
+6. Should users have accounts/authentication, or is this a guest-access tool?
+7. What is the per-video budget ceiling for cloud API calls? (e.g., $0.10/video, $1.00/video) This determines which APIs are viable.
+

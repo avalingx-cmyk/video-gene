@@ -39,6 +39,33 @@ Create a video from a user prompt (text input, with optional .md/.PDF file uploa
 - **Deployment**: Cloud hosting (Vercel, Railway, Render, or similar) — zero local infrastructure.
 - **Automation**: n8n webhooks and API endpoints for workflow integration.
 
+## Updated Video API Research (2026)
+
+### Best Free/Low-Cost Cloud APIs (No Local GPU Required)
+
+| API | Free Tier | Rate Limit | Max Resolution | Audio | API Key Required | Notes |
+|-----|-----------|------------|----------------|-------|-----------------|-------|
+| **ZSky AI** | Unlimited (ad-supported) | 10 req/min | 1080p | Yes, included | No (free tier) | No credit card. cURL-only integration. 10s max duration. |
+| **Happy Horse AI** | 10 free credits | — | 1080p | Yes, synchronized | No (free tier) | #1 ranked on Artificial Analysis. 15B param open-source model. Commercial license. |
+| **Free.ai (CogVideoX)** | 2.5K tokens/day (no account), 5K (free account) | — | Varies | No | No | ~25-50 videos/day. Open-source CogVideoX on A100. Commercial use allowed. |
+| **Veo 3.1 (veo3api.com)** | 100 credits/month (~20 gens) | 2 concurrent | High quality | Yes | Yes (free tier) | Google's model. Credits refresh monthly. Fast generation <5min. |
+| **Luma Ray1.6** | Pay-per-use (credits) | High on paid | High quality | Yes | Yes | Leading quality. Camera control, image-to-video. |
+| **Genbo.ai (Wan2.2)** | Paid only | High | 720p | No | Yes | Ultra-cheap: $0.005-$0.012 per video. Tencent's Wan2.2 model. |
+| **LTX-2** | Paid only | High | 4K / 50fps | Yes, native | Yes | Fastest production-grade. Audio-to-video support. |
+
+### Recommended Stack for This Project
+1. **Primary (Free/Low-Cost)**: ZSky AI (truly free, 1080p+audio) + Happy Horse AI (highest quality, 10 free credits)
+2. **Fallback**: Free.ai CogVideoX (token-based, no card)
+3. **Paid Scaling**: Veo 3.1 (100 free credits/month) or Luma Ray1.6 (best quality)
+4. **Ultra-low-cost option**: Genbo.ai Wan2.2 at $0.005/video
+
+### Key Findings
+- **ZSky AI** is the only truly free cloud API with no credit card, no API key for free tier, and 1080p+audio output
+- **Happy Horse AI** (HappyHorse 1.0) is open-source, #1 ranked, and offers 10 free credits to start
+- **Free.ai** uses CogVideoX (Apache 2.0 license) with ~25-50 free videos/day
+- All leading APIs now support **native audio synchronization** (ZSky, Happy Horse, Veo 3.1, LTX-2)
+- **No local GPU needed** — all options are cloud-hosted REST APIs
+
 ## Milestones
 1. Research and select appropriate third-party cloud APIs for text-to-video and audio generation.
 2. Set up development environment and cloud hosting.

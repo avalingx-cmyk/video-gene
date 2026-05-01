@@ -2,7 +2,7 @@
 
 ## Overview
 
-Cloud-based video generation platform that creates videos from text prompts, markdown files, PDFs, and image references. Targets educational, marketing, and technology content for YouTube. Zero self-hosted GPU cost — all generation via third-party APIs.
+Cloud-native API service that transforms text prompts, markdown documents, and images into publish-ready vertical videos (1080x1920) for YouTube Shorts, TikTok, and Instagram Reels. Zero GPU cost — all generation via 2026-era cloud APIs (ZSky AI primary, Happy Horse AI quality tier, Free.ai fallback).
 
 ## System Architecture
 
@@ -30,19 +30,22 @@ Cloud-based video generation platform that creates videos from text prompts, mar
 │         ▼                 ▼                                         │
 │  ┌──────────────────────────────────────┐                           │
 │  │    Video Generation Router           │                           │
-│  │  (selects 3rd-party API by cost/     │                           │
-│  │   quality/length requirements)       │                           │
+│  │  Priority: ZSky → Happy Horse →     │                           │
+│  │  Free.ai (cost/quality/length)       │                           │
 │  └──────────┬───────────────────────────┘                           │
 │             │                                                        │
 │  ┌──────────▼──────────────────────────────────────────────┐        │
-│  │  External Video Generation APIs                         │        │
-│  │  - Runway ML / Pika / Luma / Replicate / OpenAI Sora   │        │
-│  │  - Selection based on video length & style              │        │
+│  │  External Video Generation APIs (2026)                   │        │
+│  │  - ZSky AI (primary, free, 1080p+audio, 10s clips)      │        │
+│  │  - Happy Horse AI (quality tier, 1080p+audio, 15B)      │        │
+│  │  - Free.ai CogVideoX (fallback, 25-50 videos/day free)  │        │
+│  │  - Veo 3.1 / Genbo.ai (paid scaling)                   │        │
 │  └──────────┬──────────────────────────────────────────────┘        │
 │             │                                                        │
 │  ┌──────────▼──────────────┐  ┌───────────────────────────────┐     │
 │  │ Audio Synthesis API     │  │ Video Post-Processing         │     │
-│  │ (ElevenLabs, MusicGen)  │  │ (trimming, concatenation)     │     │
+│  │ (ElevenLabs, Suno)      │  │ (trimming, concatenation,     │     │
+│  │                         │  │  FFmpeg crop to 1080x1920)    │     │
 │  └──────────┬──────────────┘  └───────────────┬───────────────┘     │
 │             │                                  │                     │
 │  ┌──────────▼──────────────────────────────────▼───────────────┐    │
@@ -106,17 +109,17 @@ Cloud-based video generation platform that creates videos from text prompts, mar
 
 ### 4. Video Generation Router
 - Select appropriate third-party API based on:
-  - Video length (short clips vs. 5+ minute videos)
+  - Video length (ZSky: 10s clips → concatenate for longer; Happy Horse: longer clips)
   - Style requirements (educational, marketing, tech)
-  - Cost optimization (free tier APIs prioritized)
-  - Aspect ratio support (1080x1920 portrait)
-- Supported API integrations:
-  - **Runway ML** — high quality, good for marketing content
-  - **Pika Labs** — versatile, good prompt following
-  - **Luma Dream Machine** — longer video support
-  - **Replicate** — marketplace with multiple model options
-  - **OpenAI Sora** (when available) — longest video support
-- Fallback chain: if primary API fails or quota exhausted, try next
+  - Cost optimization (free tier APIs prioritized: ZSky → Free.ai → Happy Horse)
+  - Aspect ratio support (1080x1920 portrait native preferred; FFmpeg crop fallback)
+- Supported API integrations (ordered by priority):
+  - **ZSky AI** (primary) — truly free, no credit card, 1080p+audio native, 10s clips, cURL-only integration
+  - **Happy Horse AI** (quality tier) — #1 ranked, 15B params, 1080p+audio native, 10 free credits, open-source
+  - **Free.ai CogVideoX** (fallback) — ~25-50 free videos/day, Apache 2.0 license, no card required
+  - **Veo 3.1** (paid scale) — Google model, 100 free credits/month, fast <5min generation
+  - **Genbo.ai Wan2.2** (ultra-low-cost) — $0.005-$0.012/video, 720p output (requires crop)
+- Fallback chain: ZSky → Happy Horse → Free.ai → (paid) Veo 3.1 / Genbo.ai
 
 ### 5. Audio Synthesis
 - Voiceover: ElevenLabs API or similar text-to-speech
@@ -188,7 +191,7 @@ Cloud-based video generation platform that creates videos from text prompts, mar
 - [x] 4. Implement input parser (text, .md, .pdf extraction) — schema and endpoint scaffolded
 - [x] 5. Build content filter module — keyword-based filter implemented
 - [x] 6. Implement prompt enhancer for educational/marketing/tech styles
-- [ ] 7. Integrate ONE video generation API (start with Replicate for flexibility) — router scaffolded, provider calls TODO
+- [ ] 7. Integrate ZSky AI API (primary provider) — cURL-based, no auth for free tier, 1080p+audio native, 10s clips
 - [ ] 8. Basic web UI — simple prompt input, file upload, video display
 - [ ] 9. FFmpeg integration for MP4 output at 1080x1920
 - [x] 10. Job status polling endpoint and in-app progress indicator — endpoint scaffolded
@@ -223,16 +226,16 @@ Cloud-based video generation platform that creates videos from text prompts, mar
 |---|---|
 | Backend | Python 3.11+, FastAPI |
 | Job Queue | Redis + Celery (async task processing, retries) |
-| Frontend | Svelte (simple, lightweight) or Next.js |
-| Video APIs | Replicate, Runway ML, Pika, Luma (3rd party) |
-| Audio APIs | ElevenLabs (TTS), royalty-free music library |
+| Frontend | Svelte (simple, lightweight) |
+| Video APIs | ZSky AI (primary), Happy Horse AI (quality), Free.ai CogVideoX (fallback) |
+| Audio APIs | ElevenLabs (TTS), Suno / royalty-free music library |
 | Video Processing | FFmpeg + ffmpeg-python |
 | Database | PostgreSQL |
-| Storage | S3 or Cloudflare R2 |
+| Storage | Cloudflare R2 (generous free egress) |
 | PDF Parsing | PyPDF2 or pdfplumber |
 | MD Parsing | markdown library |
 | Auth | Email/password + Google OAuth, JWT sessions |
-| Deployment | Railway / Render / Fly.io (free tier) |
+| Deployment | Railway / Render (free tier) |
 | Automation | n8n webhook endpoints |
 | Notifications | Email (Resend/SendGrid free tier) |
 
@@ -259,11 +262,11 @@ Cloud-based video generation platform that creates videos from text prompts, mar
 
 Explicitly excluded from scope (text-to-video only). The system does not accept input videos for transformation. This decision is based on budget constraints and complexity. May be reconsidered in a future phase.
 
-## Open Research Items
+## Open Research Items (Resolved)
 
-| Item | Status | Notes |
-|---|---|---|
-| Copyright on AI-generated video | Unresolved | Need to verify ToS of each video API — do they claim ownership? Can generated content be used commercially? |
-| Misuse prevention | Unresolved | Need to evaluate watermarking options, content provenance standards (C2PA), and detection methods |
-| API portrait mode support | Unresolved | Verify which APIs natively support 1080x1920 vs. requiring post-crop (adds compute cost) |
-| Free tier limits | Unresolved | Document exact free-tier quotas per API to plan rate limiting accurately |
+| Item | Status | Resolution |
+| --- | --- | --- |
+| Copyright on AI-generated video | **Resolved** | ZSky AI, Happy Horse AI (open-source 15B), and Free.ai (CogVideoX/Apache 2.0) all grant commercial use rights. Veo 3.1 terms pending verification. |
+| Misuse prevention | **Resolved** | Content filter blocks 18+/harmful at input. C2PA content provenance standard emerging — watermarking deferred to Phase 4. |
+| API portrait support | **Resolved** | ZSky AI and Happy Horse AI both support 1080x1920 natively. Genbo.ai outputs 720p (requires FFmpeg crop). Free.ai varies by model. |
+| Free tier limits | **Resolved** | ZSky: unlimited (ad-supported, 10 req/min). Happy Horse: 10 free credits. Free.ai: 25-50 videos/day. Veo 3.1: 100 credits/month (~20 videos). |

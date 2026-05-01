@@ -1,5 +1,5 @@
 from app.tasks.celery_app import celery_app
-from app.models.video import VideoStatus
+from app.models.video import Video, VideoStatus
 
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=10)

@@ -185,16 +185,16 @@ Cloud-native API service that transforms text prompts, markdown documents, and i
 ## Implementation Steps
 
 ### Phase 1: Foundation (Week 1-2)
-- [x] 1. Set up FastAPI backend project structure
-- [x] 2. Set up Redis job queue (Celery/RQ) for async processing
+- [ ] 1. Set up FastAPI backend project structure
+- [ ] 2. Set up Redis job queue (Celery/RQ) for async processing
 - [ ] 3. Implement authentication (email/password + Google OAuth) — stubs created, need OAuth integration
-- [x] 4. Implement input parser (text, .md, .pdf extraction) — schema and endpoint scaffolded
-- [x] 5. Build content filter module — keyword-based filter implemented
-- [x] 6. Implement prompt enhancer for educational/marketing/tech styles
+- [ ] 4. Implement input parser (text, .md, .pdf extraction) — schema and endpoint scaffolded
+- [ ] 5. Build content filter module — keyword-based filter implemented
+- [ ] 6. Implement prompt enhancer for educational/marketing/tech styles
 - [ ] 7. Integrate ZSky AI API (primary provider) — cURL-based, no auth for free tier, 1080p+audio native, 10s clips
 - [ ] 8. Basic web UI — simple prompt input, file upload, video display
 - [ ] 9. FFmpeg integration for MP4 output at 1080x1920
-- [x] 10. Job status polling endpoint and in-app progress indicator — endpoint scaffolded
+- [ ] 10. Job status polling endpoint and in-app progress indicator — endpoint scaffolded
 
 ### Phase 2: Audio & Post-Processing (Week 3)
 1. Integrate text-to-speech API for voiceover

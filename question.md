@@ -68,3 +68,17 @@
 43. **Copyright**: Do generated videos from AI models have clear usage rights? Do any APIs claim ownership?
 44. **Misuse prevention**: What detection methods work for deepfake-style content generation?
 45. **API portrait support**: Which video generation APIs actually support 1080x1920 output natively vs. requiring post-crop?
+
+## Open Questions for Architecture Decision (DIN-64)
+
+The following questions need user clarification before final implementation begins:
+
+46. **Brand logo handling** — Should the system auto-detect brand colors from a logo upload, or does the user input hex codes manually?
+47. **Font library** — Use Google Fonts (free) or support custom brand font uploads?
+48. **Template system** — Pre-built templates for educational/marketing/tech (like Canva), or start from scratch every time?
+49. **Music licensing** — Use AI-generated music (Suno — no copyright issues) or a licensed royalty-free library (Epidemic Sound, Artlist)?
+50. **Export formats** — MP4 only, or also GIF/WebM for social platforms?
+51. **Editor budget commitment** — Commit to the $0 FFmpeg + Canvas 2D stack, or budget for Remotion ($100/mo) for professional preview/export?
+52. **Free tier exhaustion strategy** — If Happy Horse free credits run out, should we cap per-user generation or prompt for payment/upgraded plan?
+
+*Added: 2026-05-02 (Megatron, DIN-64 architecture decision)*

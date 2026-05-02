@@ -1,63 +1,98 @@
-# Implementation Plan for Video Generator
+# Implementation Plan for Video Generator — New Architecture
+
+> **Status:** Plan mode — awaiting approval before implementation  
+> **Date:** 2026-05-02  
 
 ## Overview
 
-Cloud-native API service that transforms text prompts, markdown documents, and images into publish-ready vertical videos (1080x1920) for YouTube Shorts, TikTok, and Instagram Reels. Zero GPU cost — all generation via 2026-era cloud APIs (ZSky AI primary, Happy Horse AI quality tier, Free.ai fallback).
+User inputs a prompt. System creates a video. Simple.
+
+Cloud-native API service that transforms text prompts, markdown documents, and images into publish-ready vertical videos (1080×1920) for YouTube Shorts, TikTok, and Instagram Reels. **Zero GPU cost** — all generation via 2026-era cloud APIs.
+
+## The New Idea: How It Works
+
+1. **User inputs a prompt** (text, .md, .pdf, or image reference)
+2. **System processes the prompt** — splits into segments, generates each layer:
+   - **Video layer:** AI video model (Happy Horse / Luma / Runway) generates 5–15s clean footage segments — NO text in video prompts
+   - **Text layer:** GPT-4 / Claude generates titles, CTAs, and scripts
+   - **Audio layer:** Groq Orpheus "qrog" generates TTS voiceover per segment
+   - **Music layer:** Suno / MiniMax generates background music matched to content type
+3. **User reviews in a browser Canvas editor** — drag text, adjust timing, edit audio, change transitions, preview at 360p
+4. **User approves → FFmpeg exports** final 1080×1920 MP4 with all layers composed
+5. **Optional:** Upload to YouTube, trigger n8n workflow, download
 
 ## System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         Frontend (Web App)                          │
-│  ┌─────────────┐  ┌──────────────┐  ┌───────────────────────────┐  │
-│  │ Prompt Input│  │ File Upload  │  │ Image Reference Upload    │  │
-│  │ (text/md/pdf)│  │ (.md, .pdf)  │  │ (for image-to-video)      │  │
-│  └──────┬──────┘  └──────┬───────┘  └──────────────┬────────────┘  │
-│         └────────────────┼─────────────────────────┘               │
-│                          ▼                                          │
-│              ┌───────────────────────┐                              │
-│              │   Simple Mode UI      │                              │
-│              │   (no advanced knobs) │                              │
-│              └───────────┬───────────┘                              │
-└──────────────────────────┼──────────────────────────────────────────┘
-                           │ HTTP
-┌──────────────────────────▼──────────────────────────────────────────┐
+│  ┌─────────────────┐  ┌──────────────┐  ┌───────────────────────┐  │
+│  │ Prompt Input     │  │ File Upload  │  │ Image Reference        │  │
+│  │ (text/md/pdf)    │  │ (.md, .pdf)  │  │ (image-to-video)       │  │
+│  └────────┬─────────┘  └──────┬───────┘  └───────────┬───────────┘  │
+│           └───────────────────┼──────────────────────┘              │
+│                               ▼                                     │
+│              ┌────────────────────────────────────┐                 │
+│              │  Canvas Editor UI                  │                 │
+│              │  - <video> + Canvas overlay        │                 │
+│              │  - Drag text (Canva-like)          │                 │
+│              │  - Timeline scrubber               │                 │
+│              │  - Transition selector             │                 │
+│              │  - 360p preview → Approve → Export │                 │
+│              └────────────────┬───────────────────┘                 │
+└───────────────────────────────┼─────────────────────────────────────┘
+                                │ HTTP
+┌───────────────────────────────▼─────────────────────────────────────┐
 │                      Backend (Python FastAPI)                       │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐  │
-│  │ Input Parser │  │ Prompt       │  │ Content Filter           │  │
-│  │ (text/md/pdf)│  │ Enhancer     │  │ (no 18+, no harmful)     │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────────────────────────┘  │
-│         ▼                 ▼                                         │
-│  ┌──────────────────────────────────────┐                           │
-│  │    Video Generation Router           │                           │
-│  │  Priority: ZSky → Happy Horse →     │                           │
-│  │  Free.ai (cost/quality/length)       │                           │
-│  └──────────┬───────────────────────────┘                           │
-│             │                                                        │
-│  ┌──────────▼──────────────────────────────────────────────┐        │
-│  │  External Video Generation APIs (2026)                   │        │
-│  │  - ZSky AI (primary, free, 1080p+audio, 10s clips)      │        │
-│  │  - Happy Horse AI (quality tier, 1080p+audio, 15B)      │        │
-│  │  - Free.ai CogVideoX (fallback, 25-50 videos/day free)  │        │
-│  │  - Veo 3.1 / Genbo.ai (paid scaling)                   │        │
-│  └──────────┬──────────────────────────────────────────────┘        │
-│             │                                                        │
-│  ┌──────────▼──────────────┐  ┌───────────────────────────────┐     │
-│  │ Audio Synthesis API     │  │ Video Post-Processing         │     │
-│  │ (ElevenLabs, Suno)      │  │ (trimming, concatenation,     │     │
-│  │                         │  │  FFmpeg crop to 1080x1920)    │     │
-│  └──────────┬──────────────┘  └───────────────┬───────────────┘     │
-│             │                                  │                     │
-│  ┌──────────▼──────────────────────────────────▼───────────────┐    │
-│  │              Output: MP4 (1080x1920 portrait)               │    │
-│  └──────────────────────────┬──────────────────────────────────┘    │
-└─────────────────────────────┼───────────────────────────────────────┘
-                              │
-┌─────────────────────────────▼───────────────────────────────────────┐
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  Input Parser — text, .md, .pdf, image uploads               │  │
+│  └──────────────┬───────────────────────────────────────────────┘  │
+│                 ▼                                                   │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  Content Filter — block 18+, harmful, no text in video prompts│  │
+│  └──────────────┬───────────────────────────────────────────────┘  │
+│                 ▼                                                   │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  AI Planning Layer (GPT-4 / Claude)                           │  │
+│  │  - Split prompt into 3-5 segments (5-15s each)               │  │
+│  │  - Generate per-segment:                                      │  │
+│  │    • Video description (NO text — pure footage)               │  │
+│  │    • Narration script for TTS                                 │  │
+│  │    • Title + CTA text + position                              │  │
+│  │    • Transition type                                           │  │
+│  └──────────────┬───────────────────────────────────────────────┘  │
+│                 ▼ (parallel generation, tracked by Celery + Redis)  │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  PARALLEL GENERATION LAYERS                                   │  │
+│  │                                                                │  │
+│  │  ┌─────────────────┐  ┌─────────────┐  ┌───────────────────┐  │  │
+│  │  │ Video Layer      │  │ Audio Layer  │  │ Music Layer       │  │  │
+│  │  │ Happy Horse API   │  │ Groq Orpheus │  │ Suno / MiniMax    │  │  │
+│  │  │ (primary)         │  │ TTS "qrog"   │  │ (auto-matched)    │  │  │
+│  │  │ Luma, Runway,     │  │ ElevenLabs,  │  │ Royalty-free      │  │  │
+│  │  │ Kling (fallback)  │  │ FishSpeech   │  │ library           │  │  │
+│  │  │                   │  │              │  │                   │  │  │
+│  │  │ 5-15s segments    │  │ Per-segment  │  │ Mood-matched      │  │  │
+│  │  │ 1080×1920 9:16    │  │ Voiceover    │  │ to content type   │  │  │
+│  │  └────────┬──────────┘  └──────┬───────┘  └───────┬───────────┘  │  │
+│  └───────────┼────────────────────┼──────────────────┼─────────────┘  │
+│              └────────────────────┼──────────────────┘                │
+│                                   ▼                                   │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  FFmpeg Composition & Export                                  │  │
+│  │  - Concatenate segments with xfade transitions               │  │
+│  │  - Burn text overlays (drawtext / ASS subtitles)             │  │
+│  │  - Mix TTS + BGM with sidechain ducking                      │  │
+│  │  - Output: 1080×1920 H.264 AAC MP4                          │  │
+│  └──────────────────────────┬───────────────────────────────────┘  │
+└──────────────────────────────┼──────────────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────────────┐
 │                        Integrations                                  │
 │  ┌──────────────────┐  ┌──────────────┐  ┌───────────────────────┐  │
-│  │ YouTube API      │  │ n8n Webhook  │  │ Cloud Storage         │  │
-│  │ (schedule upload)│  │ / Automation │  │ (S3/R2 for assets)    │  │
+│  │ YouTube API      │  │ n8n Webhook  │  │ Cloud Storage (R2)    │  │
+│  │ (schedule upload)│  │ / Automation │  │ (segments + finals)   │  │
 │  └──────────────────┘  └──────────────┘  └───────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -66,207 +101,194 @@ Cloud-native API service that transforms text prompts, markdown documents, and i
 
 | Requirement | Value |
 |---|---|
-| Video length | 30 seconds to 5+ minutes |
-| Resolution | 1080x1920 (portrait/mobile) |
-| Audio | Yes — background music + voiceover |
-| Voiceover languages | English only for now |
-| Voice style | Natural/conversational for educational; professional for marketing/tech |
-| Background music style | Auto-selected by prompt enhancer based on video content type |
-| Content types | Educational, marketing, technology (YouTube) |
+| Video length | 30 seconds to 5+ minutes (via 3–20 segments of 5–15s) |
+| Resolution | 1080×1920 (9:16 portrait) |
+| Audio | TTS voiceover + background music |
+| Voiceover languages | English (Groq Orpheus), 32+ (ElevenLabs), 80+ (Fish Speech) |
+| Voice style | Natural/conversational (ed) + professional (mkt/tech) + vocal tags ([cheerful], [whisper]) |
+| Content types | Educational, marketing, technology |
 | Prompt complexity | Both simple and complex |
 | Target audience | Parents, kids, social media users, YouTube creators |
-| Interface | Simple (no advanced controls for now) |
+| Interface | Canvas-based editor: drag text, timeline, transitions, preview |
 | Output format | MP4 only |
-| Post-generation editing | Trimming, concatenation |
-| Deployment | Web app |
-| Budget | $0 — cloud only, third-party APIs |
-| Automation | n8n bidirectional integration (trigger + callback) |
-| n8n trigger direction | Both — n8n triggers generation via webhook; completed videos trigger n8n workflows |
-| Input formats | Text prompt, .md file, .pdf file, image references |
-| Image-to-video | Yes — user can attach images to prompt |
-| Content filter | No 18+, no harmful content |
+| Post-generation editing | Full: drag text, adjust timing, transitions, reorder, regenerate segments |
+| Deployment | Web app (React + Next.js + Canvas 2D) |
+| Budget | $0 — all free/open-source tools |
+| Automation | n8n bidirectional (trigger + callback) |
+| Input formats | Text prompt, .md, .pdf, image references |
+| Content filter | No 18+, no harmful |
 | Watermark | No |
-| Privacy | User-only access, no exposure |
+| Privacy | User-only access |
 
 ## Components
 
 ### 1. Input Parser
-- Parse text prompts directly
-- Extract text from uploaded .md and .pdf files
-- Handle image attachments (upload + store URL for image-to-video APIs)
-- Validate content against safety filters before processing
+- Accept text prompts directly
+- Extract text from .md and .pdf files
+- Accept image references for character consistency
+- Validate against content filter before processing
 
-### 2. Prompt Enhancer
-- Enrich simple prompts with style, lighting, camera movement descriptors
-- Generate structured scene descriptions for complex multi-scene videos
-- Add temporal markers for longer videos (scene transitions, pacing)
-- Tailor prompt style to content type: educational, marketing, or technology
+### 2. Content Filter
+- Block 18+ and harmful content
+- Keyword-based + semantic filtering
+- Detect prompts attempting to embed text/branding in video descriptions → redirect to text overlay layer
 
-### 3. Content Filter
-- Block 18+ and harmful content before API submission
-- Keyword-based and semantic filtering
-- Logging of filtered requests for review
+### 3. AI Planning Layer (GPT-4 / Claude)
+- **Split** user prompt into 3–5 segment scripts (5–15s each)
+- **Generate** per segment:
+  - Video description — pure footage, camera, lighting, motion, NO text
+  - Narration script for TTS
+  - Title text + position
+  - CTA text + position
+  - Transition type (fade / wipe / slide)
+- Output: JSON with timestamps and coordinates
 
-### 4. Video Generation Router
-- Select appropriate third-party API based on:
-  - Video length (ZSky: 10s clips → concatenate for longer; Happy Horse: longer clips)
-  - Style requirements (educational, marketing, tech)
-  - Cost optimization (free tier APIs prioritized: ZSky → Free.ai → Happy Horse)
-  - Aspect ratio support (1080x1920 portrait native preferred; FFmpeg crop fallback)
-- Supported API integrations (ordered by priority):
-  - **ZSky AI** (primary) — truly free, no credit card, 1080p+audio native, 10s clips, cURL-only integration
-  - **Happy Horse AI** (quality tier) — #1 ranked, 15B params, 1080p+audio native, 10 free credits, open-source
-  - **Free.ai CogVideoX** (fallback) — ~25-50 free videos/day, Apache 2.0 license, no card required
-  - **Veo 3.1** (paid scale) — Google model, 100 free credits/month, fast <5min generation
-  - **Genbo.ai Wan2.2** (ultra-low-cost) — $0.005-$0.012/video, 720p output (requires crop)
-- Fallback chain: ZSky → Happy Horse → Free.ai → (paid) Veo 3.1 / Genbo.ai
+### 4. Video Generation Layer (Segment Generator)
+- **Primary:** Happy Horse via fal.ai — 15s max, 1080p+audio, 9:16 native, free credits
+- **Fallbacks:** Luma Ray2 (10s, quality), Runway Gen-4.5 (10s, highest quality), Kling 3 (15s, character consistency)
+- **Provider chain:** Happy Horse → Luma → Runway → Kling
+- **Critical rule:** Prompts contain NO text — clean footage only
 
-### 5. Audio Synthesis
-- Voiceover: ElevenLabs API or similar text-to-speech
-  - **Languages**: English only for now
-  - **Voice style**: Natural/conversational for educational content; professional for marketing/technology content
-- Background music: Suno / MusicGen API or royalty-free library
-  - **Style selection**: Auto-determined by prompt enhancer based on video content type; user does not manually select
-- Audio-video sync and mixing via FFmpeg
+### 5. Audio Generation Layer (TTS Voiceover)
+- **Primary:** Groq Orpheus "qrog" — fastest TTS, vocal directions ([cheerful], [whisper]), included with Groq API
+- **Fallback 1:** ElevenLabs — 32+ voices, 10K chars/mo free
+- **Fallback 2:** Fish Speech — open-source (Apache 2.0), 80+ languages, self-hosted
+- Generate per-segment TTS from narration scripts
 
-### 6. Video Post-Processing
-- FFmpeg for:
-  - Trimming videos
-  - Concatenating multiple clips into longer videos
-  - Adding audio tracks to video
-  - Ensuring 1080x1920 output, MP4 format (H.264)
+### 6. Music Generation Layer
+- **Primary:** Suno / MiniMax Music — AI-generated, auto-matched to content mood
+- **Fallback:** Royalty-free music library
+- Auto-selected by content type (educational = calm, marketing = upbeat, tech = modern)
 
-### 7. Publishing & Scheduling
-- YouTube Data API v3 integration
-  - Upload videos
-  - Schedule publish time
-  - Set title, description, tags, thumbnail
-- n8n webhook endpoints for automation workflows
+### 7. Canvas Editor (Frontend)
+- **Base layer:** HTML5 `<video>` playing segments
+- **Overlay layer:** Transparent `<canvas>` synced to `video.currentTime`
+- **Text rendering:** Canvas 2D `fillText()` with web fonts
+- **Drag-and-drop:** Pointer events for moving text boxes
+- **Timeline scrubber:** Jump between segments, adjust start/end times
+- **Transition selector:** Per-segment (fade / wipe / slide)
+- **Preview mode:** 360p fast / 1080p final check
+- **State:** JSON text-track model — same JSON feeds FFmpeg export
 
-### 8. Storage
-- Cloud storage (S3/R2 compatible) for:
-  - Uploaded input files
-  - Generated video output
-  - Image references
-- PostgreSQL for metadata (prompts, video records, user preferences)
+### 8. FFmpeg Export (Backend)
+- **Segment concatenation:** `ffmpeg -f concat` with `xfade` transitions
+- **Text overlay:** `drawtext` or ASS subtitles from JSON
+- **Audio mixing:** `sidechaincompress` — TTS ducks BGM
+  - `threshold=-24dB, ratio=6, attack=20ms, release=250ms`
+- **Output:** 1080×1920 H.264 AAC MP4, `-crf 18, -movflags +faststart`
 
-### 9. Job Queue & Async Processing
-- Video generation APIs are async with 30s–5min+ wait times
-- Use Redis-based job queue (Celery or RQ) for:
-  - Submitting generation jobs to external APIs
-  - Polling API status / handling webhook callbacks
-  - Retry with exponential backoff on transient failures
-  - Fallback chain: if primary API fails/quota exhausted, queue to next provider
-- User-facing status polling endpoint and in-app progress indicator
-- Email notification on job completion or failure
+### 9. Publishing & Scheduling
+- YouTube Data API v3 — upload + schedule publish
+- n8n webhook endpoints (bidirectional)
 
-### 10. Authentication & User Management
-- Simple email/password + OAuth (Google) authentication
-- Per-user isolation: each user has own video library, prompts, scheduled publishes
-- API key generation per user for n8n/developer access
-- Single user role for now (no admin distinction)
-- Session management via JWT tokens
+### 10. Storage
+- Cloudflare R2 for segments, audio, music, final MP4s
+- PostgreSQL for metadata (users, segments, projects, edits)
 
-### 11. Rate Limiting & Quota Management
-- Per-user rate limits to stay within free-tier API quotas
-- Queue excess requests when limits hit
-- Track API usage per provider to optimize cost routing
+### 11. Job Queue & Async Processing
+- Redis + Celery — submit, poll, retry, fallback
+- Per-segment progress tracking
+- Email notification on completion/failure
 
-### 12. n8n Integration API
-- **Bidirectional triggers**: 
-  - n8n can trigger video generation via webhook (POST /api/v1/generate)
-  - Completed videos can trigger n8n workflows via callback URL
-- Webhook endpoints:
-  - POST /api/v1/generate — trigger video generation (JSON payload with prompt, settings, callback URL)
-  - POST /api/v1/webhook/complete — callback URL target for n8n to receive completed video URL
-- JSON payload format: `{ prompt, style, length, audio, callback_url, api_key }`
-- API key authentication for all developer endpoints
+### 12. Authentication & Rate Limiting
+- Email/password + Google OAuth, JWT sessions
+- Per-user rate limits within free API quotas
+- API key auth for n8n/developer endpoints
 
-## Implementation Steps
+## Implementation Phases
 
-### Phase 1: Foundation (Week 1-2)
-- [ ] 1. Set up FastAPI backend project structure
-- [ ] 2. Set up Redis job queue (Celery/RQ) for async processing
-- [ ] 3. Implement authentication (email/password + Google OAuth) — stubs created, need OAuth integration
-- [ ] 4. Implement input parser (text, .md, .pdf extraction) — schema and endpoint scaffolded
-- [ ] 5. Build content filter module — keyword-based filter implemented
-- [ ] 6. Implement prompt enhancer for educational/marketing/tech styles
-- [ ] 7. Integrate ZSky AI API (primary provider) — cURL-based, no auth for free tier, 1080p+audio native, 10s clips
-- [ ] 8. Basic web UI — simple prompt input, file upload, video display
-- [ ] 9. FFmpeg integration for MP4 output at 1080x1920
-- [ ] 10. Job status polling endpoint and in-app progress indicator — endpoint scaffolded
+### Phase 1: Segment Generation + Basic Composition (Week 1–2)
+- [x] 1. FastAPI backend scaffold
+- [x] 2. Redis + Celery job queue
+- [ ] 3. Email/password + Google OAuth auth
+- [x] 4. Input parser (text, .md, .pdf)
+- [x] 5. Content filter
+- [x] 6. AI Planning layer (GPT-4 segment splitting)
+- [ ] 7. **Happy Horse API via fal.ai** — generate 5–15s video segments
+- [ ] 8. **Groq Orpheus TTS (qrog)** — per-segment voiceover
+- [ ] 9. **Suno / MiniMax BGM** — auto-selected music
+- [ ] 10. **FFmpeg composition** — concat + text overlay + audio mix
+- [ ] 11. **Canvas editor scaffold** — React + Canvas, one segment
+- [ ] 12. Segment model + API endpoint
+- [x] 13. Job status polling
 
-### Phase 2: Audio & Post-Processing (Week 3)
-1. Integrate text-to-speech API for voiceover
-2. Add background music generation/selection
-3. Implement video trimming and concatenation
-4. Audio-video mixing pipeline
-5. Implement retry logic with exponential backoff and provider fallback chain
+### Phase 2: Full Editor + Audio Mixing (Week 3)
+1. Canvas drag-and-drop text positioning
+2. Text styling (font, size, color, outline)
+3. Timeline scrubber for multi-segment
+4. Transition selector per segment
+5. FFmpeg `xfade` transitions
+6. FFmpeg `sidechaincompress` ducking
+7. 360p low-res preview mode
+8. User approval → 1080p export trigger
 
-### Phase 3: Integrations (Week 4)
-1. YouTube API integration with scheduling
-2. n8n webhook endpoints (POST /api/v1/generate, POST /api/v1/webhook/complete)
-3. API key generation and authentication for developer endpoints
-4. Additional video API integrations (Runway, Pika, Luma)
-5. API router with fallback chain and rate limiting
-6. Email notifications for job completion/failure
+### Phase 3: Multi-Segment + Publishing (Week 4)
+1. 3–5 segment timeline (30–75s total)
+2. Segment reordering in editor
+3. Regenerate individual segments
+4. Final 1080p render
+5. YouTube Data API v3 integration
+6. n8n webhook endpoints
 
-### Phase 4: Polish & Launch (Week 5)
-1. Cloud storage setup (S3/R2)
-2. PostgreSQL metadata storage with per-user isolation
-3. User video library and prompt history UI
-4. Rate limiting and quota management dashboard
-5. Testing with real prompts across content types
-6. API documentation for n8n and developer access
-7. Resolve open research items (copyright, misuse prevention, API portrait support)
+### Phase 4: Polish (Week 5)
+1. API key auth for n8n/developer
+2. Rate limiting + quota management
+3. User library + prompt history UI
+4. Cloud storage (R2) for all assets
+5. Testing with real prompts
+6. API documentation
 
 ## Technology Stack
 
 | Layer | Technology |
 |---|---|
 | Backend | Python 3.11+, FastAPI |
-| Job Queue | Redis + Celery (async task processing, retries) |
-| Frontend | Svelte (simple, lightweight) |
-| Video APIs | ZSky AI (primary), Happy Horse AI (quality), Free.ai CogVideoX (fallback) |
-| Audio APIs | ElevenLabs (TTS), Suno / royalty-free music library |
-| Video Processing | FFmpeg + ffmpeg-python |
+| Job Queue | Redis + Celery |
+| AI Planning | GPT-4 / Claude |
+| Frontend | React + Next.js + HTML5 Canvas 2D |
+| Video Preview | HTML5 `<video>` + Canvas overlay |
+| Video Generation | Happy Horse (fal.ai), Luma Ray2, Runway Gen-4.5, Kling 3 |
+| TTS | Groq Orpheus (qrog), ElevenLabs, Fish Speech |
+| BGM | Suno / MiniMax, royalty-free library |
+| Video Processing | FFmpeg: concat, xfade, drawtext, sidechaincompress |
 | Database | PostgreSQL |
-| Storage | Cloudflare R2 (generous free egress) |
-| PDF Parsing | PyPDF2 or pdfplumber |
-| MD Parsing | markdown library |
-| Auth | Email/password + Google OAuth, JWT sessions |
+| Storage | Cloudflare R2 |
+| Auth | Email/password + Google OAuth, JWT |
 | Deployment | Railway / Render (free tier) |
-| Automation | n8n webhook endpoints |
+| Automation | n8n bidirectional webhooks |
 | Notifications | Email (Resend/SendGrid free tier) |
 
 ## Cost Strategy (Zero Budget)
 
-- Leverage free tiers of video generation APIs
-- Replicate has pay-per-use with low entry cost
-- YouTube API is free
-- ElevenLabs has free tier for TTS
-- Use spot/preemptible instances if self-hosting any components
-- Cloud storage free tiers (R2 has generous free egress)
+- **Video:** Happy Horse free credits, fallback chain
+- **TTS:** Groq Orpheus included, Fish Speech open-source
+- **BGM:** Suno/MiniMax free tier
+- **Editor:** Canvas 2D (browser, $0) + FFmpeg (open-source, $0)
+- **Storage:** Cloudflare R2 generous free egress
+- **YouTube API:** Free
+- **Deployment:** Railway/Render free tier
 
 ## Security & Privacy
 
 - User data never exposed externally
-- API keys stored as environment variables, never logged
-- Input content filtered before sending to third-party APIs
-- Generated videos accessible only to the creating user
-- No watermarking (per requirement)
-- Per-user API key authentication for developer/n8n endpoints
-- JWT token-based session management
-
-## Video-to-Video
-
-Explicitly excluded from scope (text-to-video only). The system does not accept input videos for transformation. This decision is based on budget constraints and complexity. May be reconsidered in a future phase.
+- API keys as env vars, never logged
+- Content filtered before API submission
+- Videos accessible only to creator
+- No watermark
+- Per-user API keys for n8n/developer
+- JWT session management
 
 ## Open Research Items (Resolved)
 
-| Item | Status | Resolution |
-| --- | --- | --- |
-| Copyright on AI-generated video | **Resolved** | ZSky AI, Happy Horse AI (open-source 15B), and Free.ai (CogVideoX/Apache 2.0) all grant commercial use rights. Veo 3.1 terms pending verification. |
-| Misuse prevention | **Resolved** | Content filter blocks 18+/harmful at input. C2PA content provenance standard emerging — watermarking deferred to Phase 4. |
-| API portrait support | **Resolved** | ZSky AI and Happy Horse AI both support 1080x1920 natively. Genbo.ai outputs 720p (requires FFmpeg crop). Free.ai varies by model. |
-| Free tier limits | **Resolved** | ZSky: unlimited (ad-supported, 10 req/min). Happy Horse: 10 free credits. Free.ai: 25-50 videos/day. Veo 3.1: 100 credits/month (~20 videos). |
+| Item | Resolution |
+|---|---|
+| Copyright | Happy Horse, Luma, Runway, Kling: commercial rights. Fish Speech: Apache 2.0. |
+| Misuse prevention | Content filter + safety checker + audit trail. C2PA watermarking deferred. |
+| API portrait (9:16) | All 4 APIs support 1080×1920 natively. FFmpeg crop fallback. |
+| Free tier limits | Happy Horse: free credits. Groq: included. Fish Speech: unlimited. Suno: free tier. |
+| "qrog" TTS | Groq Orpheus — fastest TTS with vocal direction tags. English + Arabic. |
+| Segment consistency | Reference images (1–9 via Happy Horse), Kling multi-shot, last-frame conditioning. |
+
+---
+
+*This document reflects the new segment-based layered architecture — replacing the old full-video generation plan.*

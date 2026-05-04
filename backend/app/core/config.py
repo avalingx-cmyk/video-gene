@@ -19,12 +19,33 @@ class Settings(BaseSettings):
     youtube_api_key: str = ""
     youtube_client_secret: str = ""
 
+    fal_api_key: str = ""
+    groq_api_key: str = ""
+    suno_api_key: str = ""
+    openai_api_key: str = ""
+
+    output_dir: str = "/tmp/videogene/output"
+    ffmpeg_path: str = "ffmpeg"
+    ffprobe_path: str = "ffprobe"
+
     s3_endpoint_url: str = ""
     s3_bucket: str = "videogene"
     s3_access_key: str = ""
     s3_secret_key: str = ""
 
     rate_limit_requests_per_minute: int = 10
+
+    fal_cost_per_second: float = 0.0
+    groq_cost_per_token: float = 0.0
+    suno_cost_perGeneration: float = 0.0
+
+    default_cost_cap_per_user: float = 10.0
+    default_cost_cap_per_project: float = 5.0
+
+    cost_alert_threshold: float = 0.8
+    cost_hard_stop_threshold: float = 1.0
+
+    batch_size: int = 5
 
     class Config:
         env_file = ".env"

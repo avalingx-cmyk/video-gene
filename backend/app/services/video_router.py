@@ -3,6 +3,8 @@ from typing import Optional
 import httpx
 import logging
 
+from .circuit_breaker import get_provider_health, CircuitBreakerConfig, CircuitState
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,6 +21,12 @@ PROVIDER_PRIORITY = [
     Provider.HAPPY_HORSE,
     Provider.FREE_AI,
 ]
+
+PROVIDER_CIRCUIT_BREAKER_CONFIGS = {
+    Provider.ZSKY: CircuitBreakerConfig(failure_threshold=3, recovery_timeout=300),
+    Provider.HAPPY_HORSE: CircuitBreakerConfig(failure_threshold=3, recovery_timeout=300),
+    Provider.FREE_AI: CircuitBreakerConfig(failure_threshold=3, recovery_timeout=300),
+}
 
 PROVIDER_CAPABILITIES = {
     Provider.ZSKY: {
@@ -195,23 +203,50 @@ async def generate_with_provider(provider: Provider, prompt: str, length_seconds
     """Submit generation request to a specific provider. Returns video URL."""
     if provider not in PROVIDER_CALLS:
         raise NotImplementedError(f"Provider {provider.value} not yet implemented")
-    return await PROVIDER_CALLS[provider](prompt, length_seconds)
+
+    health = get_provider_health()
+    try:
+        result = await PROVIDER_CALLS[provider](prompt, length_seconds)
+        await health.record_success(provider.value)
+        return result
+    except Exception:
+        await health.record_failure(provider.value)
+        raise
 
 
 async def generate_with_router(prompt: str, style: str, length_seconds: int) -> str:
-    """Route generation request through provider selection with fallback chain."""
+    """Route generation request through provider selection with fallback chain and circuit breaker."""
     primary = select_provider(length_seconds, style)
     last_error = None
+    health = get_provider_health()
 
     for provider in PROVIDER_PRIORITY:
         if PROVIDER_CAPABILITIES[provider]["max_length_seconds"] < length_seconds:
             continue
+
+        if not await health.can_attempt(provider.value):
+            logger.info(f"Provider {provider.value} circuit breaker is open, skipping")
+            continue
+
         try:
             logger.info(f"Attempting generation with provider: {provider.value}")
             return await generate_with_provider(provider, prompt, length_seconds)
         except Exception as e:
             last_error = str(e)
             logger.warning(f"Provider {provider.value} failed: {last_error}")
+            await health.record_failure(provider.value)
             continue
 
     raise RuntimeError(f"All providers failed. Last error: {last_error}")
+
+
+def get_provider_status() -> dict:
+    """Get circuit breaker status for all providers."""
+    health = get_provider_health()
+    return {
+        provider.value: {
+            "state": health.get_state(provider.value).value,
+            "available": health.is_available(provider.value),
+        }
+        for provider in PROVIDER_PRIORITY
+    }

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Text, DateTime, Enum as SAEnum, Boolean, Integer, ForeignKey
+from sqlalchemy import String, Text, DateTime, Enum as SAEnum, Boolean, Integer, Float, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
 import enum
@@ -25,6 +25,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     api_key: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    cost_cap: Mapped[float | None] = mapped_column(Float, nullable=True)
+    total_cost: Mapped[float] = mapped_column(Float, default=0.0)
+    can_upload: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 

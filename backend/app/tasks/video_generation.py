@@ -1,26 +1,41 @@
+import random
+from celery import Celery
+from celery.exceptions import MaxRetriesExceededError
+
 from app.tasks.celery_app import celery_app
 from app.models.video import Video, VideoStatus
 
+RETRY_DELAYS = [1, 2, 5, 10, 30]
 
-@celery_app.task(bind=True, max_retries=3, default_retry_delay=10)
+
+def _get_jittered_delay(attempt: int) -> int:
+    base_delay = RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)]
+    jitter = random.uniform(0.5, 1.5)
+    return int(base_delay * jitter)
+
+
+@celery_app.task(bind=True, max_retries=len(RETRY_DELAYS))
 def generate_video_task(self, video_id: str):
     """
     Main video generation task.
     1. Fetch video record from DB
     2. Run content filter
     3. Enhance prompt
-    4. Select provider via router
+    4. Select provider via router (with circuit breaker)
     5. Submit to external API
     6. Poll for completion
     7. Download video, process with FFmpeg
     8. Add audio if enabled
     9. Upload to storage
     10. Update DB and trigger callback
+
+    Autoretry with jittered exponential backoff: 1s, 2s, 5s, 10s, 30s
     """
     # TODO: Implement full pipeline
     # This is a scaffold — each step will be implemented as services
 
-    from app.core.database import async_session
+    from app.core.database import get_session_factory as _get_sf
+    async_session = _get_sf()
     from sqlalchemy import select
     import httpx
 
@@ -60,6 +75,13 @@ def generate_video_task(self, video_id: str):
             except Exception as e:
                 video.status = VideoStatus.failed
                 video.error_message = str(e)
+                retry_count = self.request.retries
+                if retry_count < self.max_retries:
+                    delay = _get_jittered_delay(retry_count)
+                    raise self.retry(exc=e, countdown=delay)
+                else:
+                    video.status = VideoStatus.failed
+                    video.error_message = f"Max retries exceeded: {str(e)}"
 
             await db.commit()
 

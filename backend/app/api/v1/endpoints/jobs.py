@@ -30,3 +30,11 @@ async def get_job_status(
         error=video.error_message,
         video_url=video.video_url,
     )
+
+
+@router.get("/providers/status")
+async def get_provider_health_status(
+    current_user: User = Depends(get_current_user),
+):
+    from app.services.video_router import get_provider_status
+    return get_provider_status()

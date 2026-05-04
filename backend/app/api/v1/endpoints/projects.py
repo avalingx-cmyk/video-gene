@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.api.v1.endpoints.auth import get_current_user
 from app.models.video import User
-from app.models.segment import VideoProject, Segment
+from app.models.segment import VideoProject, Segment, TextOverlay
 from typing import Optional
 from app.schemas.segment import ProjectCreate, ProjectResponse, ProjectUpdate, SegmentCreate, SegmentResponse, SegmentUpdate, PaginatedSegmentsResponse, SegmentReorder, ExportProjectRequest
 from datetime import datetime
@@ -60,7 +60,7 @@ async def get_project(
     result = await db.execute(
         select(VideoProject)
         .where(VideoProject.id == project_id, VideoProject.user_id == current_user.id)
-        .options(selectinload(VideoProject.segments))
+        .options(selectinload(VideoProject.segments).selectinload(Segment.text_overlays))
     )
     project = result.scalar_one_or_none()
     if not project:
@@ -192,6 +192,7 @@ async def list_segments(
     current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy import select, func
+    from sqlalchemy.orm import selectinload
 
     result = await db.execute(
         select(VideoProject).where(VideoProject.id == project_id, VideoProject.user_id == current_user.id)
@@ -208,6 +209,7 @@ async def list_segments(
     result = await db.execute(
         select(Segment)
         .where(Segment.project_id == project_id, Segment.is_deleted == False)
+        .options(selectinload(Segment.text_overlays))
         .order_by(Segment.order_index)
         .offset(offset)
         .limit(limit)
@@ -232,6 +234,7 @@ async def update_segment(
     current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
 
     result = await db.execute(
         select(VideoProject).where(VideoProject.id == project_id, VideoProject.user_id == current_user.id)
@@ -242,6 +245,7 @@ async def update_segment(
 
     result = await db.execute(
         select(Segment).where(Segment.id == segment_id, Segment.project_id == project_id)
+        .options(selectinload(Segment.text_overlays))
     )
     segment = result.scalar_one_or_none()
     if not segment:

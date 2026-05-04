@@ -5,8 +5,8 @@ from jose import jwt, JWTError
 
 from app.core.config import get_settings
 from app.core.security import create_access_token, verify_password, get_password_hash
-from app.schemas.user import UserCreate, UserResponse, Token
-from app.models.user import User
+from app.schemas.video import UserCreate, UserResponse, Token
+from app.models.video import User
 from app.core.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select

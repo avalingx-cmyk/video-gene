@@ -1,37 +1,28 @@
-# Blocked: Git Push
+# Blocked: Database Migration
 
-**Status**: Blocked on git credentials
-**Date**: 2026-04-30
-**Commit ready**: 775a21f (33 files, backend scaffold + updated docs)
+I am currently blocked on creating the database migration for the new data model changes.
 
-## Unblock Action Required
+## Problem
 
-**Owner**: user `avalingx-cmyk`
+I am unable to run the `alembic revision --autogenerate` command because I cannot find the `alembic` or `python` executables in the environment.
 
-The local commit is ready to push but this machine has no GitHub credentials configured.
+## Attempts to Solve
 
-### Option 1: Add SSH Key to GitHub
-1. Go to GitHub → Settings → SSH and GPG keys → New SSH key
-2. Add this public key:
-```
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHs8E2hNykBuZmoYCWBGZRqNDl6JenOLt8TQuDAvw2Jc
-```
-3. Remote is already set to SSH: `git@github.com:avalingx-cmyk/video-gene.git`
+I have tried the following to find the executables:
 
-### Option 2: Provide GitHub Personal Access Token
-1. Generate a token with `repo` scope at https://github.com/settings/tokens
-2. Set it as `GITHUB_TOKEN` environment variable
-3. I will configure HTTPS push and push immediately
+1.  Running `alembic` directly, assuming it's in the PATH.
+2.  Running `/.venv/bin/alembic`, assuming a standard virtual environment structure.
+3.  Running `python -m alembic`, assuming the `python` executable is in the PATH.
+4.  Searching for `venv` and `.venv` directories in the workspace.
+5.  Searching for the `python` executable in the entire filesystem.
 
-### Option 3: Run push manually
-```bash
-cd /home/paperclip/.paperclip/instances/default/projects/0d73081d-ebc6-4a6b-9057-1dfe9840ec66/c0be3ffd-334c-4f3e-994c-5443266221b0/video-gene
-git push
-```
-(after adding credentials yourself)
+All these attempts have failed.
 
-## Current State
+## Suggested Solution
 
-- All work committed locally as `775a21f`
-- SSH key generated at `~/.ssh/id_ed25519`
-- Remote set to `git@github.com:avalingx-cmyk/video-gene.git`
+To resolve this issue, I need assistance from the user. There are two possible solutions:
+
+1.  **Provide the path to the python executable**: The user can provide the full path to the python executable of the project's virtual environment. With the path, I can run the alembic command like this: `/path/to/python -m alembic revision --autogenerate -m "Add project and segment features"`.
+2.  **Run the alembic command manually**: The user can run the `alembic revision --autogenerate -m "Add project and segment features"` command themselves in the `backend` directory.
+
+Once the migration file is created, I can continue with the rest of the task.

@@ -13,6 +13,9 @@ import {
 } from '@/types/editor';
 import { projectApi, segmentApi, overlayApi } from '@/utils/api';
 
+const DRAG_SAVE_DELAY_MS = 300;
+const pendingOverlaySaves = new Map<string, ReturnType<typeof setTimeout>>();
+
 interface EditorState {
   project: VideoProject | null;
   selectedSegmentId: string | null;
@@ -267,10 +270,33 @@ export const useEditorStore = create<EditorState & EditorActions>((set, get) => 
     set({ project: updatedProject, ...undo });
 
     if (state.project) {
-      get().updateTextOverlay(overlayId, {
-        positionX: Math.max(0, Math.min(1, positionX)),
-        positionY: Math.max(0, Math.min(1, positionY)),
-      });
+      const projectId = state.project.id;
+      let targetSegmentId: string | null = null;
+      for (const seg of state.project.segments) {
+        if (seg.textOverlays.find((o) => o.id === overlayId)) {
+          targetSegmentId = seg.id;
+          break;
+        }
+      }
+      if (targetSegmentId) {
+        const segmentId = targetSegmentId;
+        const existingTimer = pendingOverlaySaves.get(overlayId);
+        if (existingTimer) clearTimeout(existingTimer);
+        pendingOverlaySaves.set(overlayId, setTimeout(() => {
+          pendingOverlaySaves.delete(overlayId);
+          const currentState = get();
+          if (!currentState.project) return;
+          const currentOverlay = currentState.project.segments
+            .flatMap((s) => s.textOverlays)
+            .find((o) => o.id === overlayId);
+          if (currentOverlay) {
+            overlayApi.update(projectId, segmentId, overlayId, {
+              position_x: currentOverlay.positionX,
+              position_y: currentOverlay.positionY,
+            }).catch(() => {});
+          }
+        }, DRAG_SAVE_DELAY_MS));
+      }
     }
   },
 

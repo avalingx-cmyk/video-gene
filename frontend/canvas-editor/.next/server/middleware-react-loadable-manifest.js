@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST='{"pages/index.tsx -> @/CanvasEditor":{"id":6716,"files":["static/chunks/716.749e366f29628b93.js"]},"pages/project/[id].tsx -> @/CanvasEditor":{"id":6716,"files":["static/chunks/716.749e366f29628b93.js"]}}';
